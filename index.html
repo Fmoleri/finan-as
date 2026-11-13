@@ -95,7 +95,7 @@
         </div>
 
         <div>
-          <label class="block text-xs font-bold text-slate-600 dark:text-slate-400 uppercase mb-1">Valor (R$) *</label>
+          <label class="block text-xs font-bold text-slate-600 dark:text-slate-400 uppercase mb-1">Valor Total (R$) *</label>
           <input type="number" step="0.01" id="valor" required placeholder="0.00" class="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500 outline-none">
         </div>
 
@@ -113,9 +113,39 @@
           </select>
         </div>
 
-        <div class="md:col-span-2">
+        <div>
+          <label class="block text-xs font-bold text-slate-600 dark:text-slate-400 uppercase mb-1">Forma de Pagamento *</label>
+          <select id="forma-pagamento" onchange="window.verificarFormaPagamento()" class="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500 outline-none font-medium">
+            <option value="Pix">⚡ Pix</option>
+            <option value="Dinheiro">💵 Dinheiro</option>
+            <option value="Cartão de Crédito">💳 Cartão de Crédito</option>
+            <option value="Cartão de Débito">💳 Cartão de Débito</option>
+            <option value="Boleto">📄 Boleto</option>
+          </select>
+        </div>
+
+        <div>
           <label class="block text-xs font-bold text-slate-600 dark:text-slate-400 uppercase mb-1">Data *</label>
           <input type="date" id="data-transacao" required class="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500 outline-none font-medium">
+        </div>
+
+        <!-- Opção dinâmica de parcelamento (visível apenas para Cartão de Crédito) -->
+        <div id="campo-parcelamento" class="md:col-span-2 hidden p-4 bg-emerald-50/50 dark:bg-slate-900/60 rounded-xl border border-emerald-200 dark:border-slate-700 space-y-2">
+          <label class="block text-xs font-bold text-emerald-800 dark:text-emerald-300 uppercase">Condição de Pagamento no Crédito</label>
+          <select id="qtd-parcelas" class="w-full p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500 outline-none font-medium">
+            <option value="1">À vista (1x)</option>
+            <option value="2">Parcelado em 2x</option>
+            <option value="3">Parcelado em 3x</option>
+            <option value="4">Parcelado em 4x</option>
+            <option value="5">Parcelado em 5x</option>
+            <option value="6">Parcelado em 6x</option>
+            <option value="7">Parcelado em 7x</option>
+            <option value="8">Parcelado em 8x</option>
+            <option value="9">Parcelado em 9x</option>
+            <option value="10">Parcelado em 10x</option>
+            <option value="11">Parcelado em 11x</option>
+            <option value="12">Parcelado em 12x</option>
+          </select>
         </div>
 
         <div class="md:col-span-2 pt-2 flex gap-3">
@@ -241,7 +271,7 @@
 
   </div>
 
-  <!-- SCRIPT FIREBASE, NAVEGAÇÃO, FILTROS, DARK MODE E GRÁFICOS -->
+  <!-- SCRIPT FIREBASE, NAVEGAÇÃO, FILTROS, DARK MODE, FORMA DE PAGAMENTO E GRÁFICOS -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getFirestore, collection, addDoc, updateDoc, onSnapshot, query, orderBy, doc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
@@ -270,6 +300,18 @@
 
     document.getElementById("data-transacao").valueAsDate = new Date();
 
+    // --- MOSTRAR/OCULTAR OPÇÃO DE PARCELAS NO CARTÃO DE CRÉDITO ---
+    window.verificarFormaPagamento = () => {
+      const forma = document.getElementById("forma-pagamento").value;
+      const divParcelamento = document.getElementById("campo-parcelamento");
+      if (forma === "Cartão de Crédito") {
+        divParcelamento.classList.remove("hidden");
+      } else {
+        divParcelamento.classList.add("hidden");
+        document.getElementById("qtd-parcelas").value = "1";
+      }
+    };
+
     // --- GERENCIADOR DE TEMA CLARO / ESCURO ---
     window.alternarTema = () => {
       const isDark = document.documentElement.classList.toggle('dark');
@@ -278,7 +320,6 @@
       if (dadosCompletos.length > 0) window.aplicarFiltrosResumo();
     };
 
-    // Carrega a preferência salva no navegador
     if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
       document.documentElement.classList.add('dark');
       document.getElementById('icone-tema').innerText = '☀️';
@@ -330,7 +371,13 @@
       document.getElementById("descricao").value = item.descricao;
       document.getElementById("valor").value = item.valor;
       document.getElementById("categoria").value = item.categoria;
+      document.getElementById("forma-pagamento").value = item.formaPagamento || "Pix";
       document.getElementById("data-transacao").value = item.data;
+
+      window.verificarFormaPagamento();
+      if (item.formaPagamento === "Cartão de Crédito") {
+        document.getElementById("qtd-parcelas").value = item.parcelas || "1";
+      }
 
       const radios = document.getElementsByName("tipo_transacao");
       for (let r of radios) {
@@ -355,6 +402,7 @@
       const form = document.getElementById("form-financas");
       form.reset();
       document.getElementById("data-transacao").valueAsDate = new Date();
+      window.verificarFormaPagamento();
       document.getElementById("titulo-form").innerHTML = `<span>📝</span> Cadastrar Nova Transação`;
       
       const btnSalvar = document.getElementById("btn-salvar");
@@ -373,23 +421,65 @@
       btn.innerText = "Salvando...";
 
       const tipoSelecionado = document.querySelector('input[name="tipo_transacao"]:checked').value;
-      const dadosPayload = {
-        descricao: document.getElementById("descricao").value.trim(),
-        valor: parseFloat(document.getElementById("valor").value),
-        tipo: tipoSelecionado,
-        categoria: document.getElementById("categoria").value,
-        data: document.getElementById("data-transacao").value
-      };
+      const formaPagamento = document.getElementById("forma-pagamento").value;
+      const parcelas = formaPagamento === "Cartão de Crédito" ? parseInt(document.getElementById("qtd-parcelas").value) : 1;
+      const valorTotal = parseFloat(document.getElementById("valor").value);
+      const dataInicial = document.getElementById("data-transacao").value;
+      const descricaoBase = document.getElementById("descricao").value.trim();
+      const categoria = document.getElementById("categoria").value;
 
       try {
         if (idEmEdicao) {
-          await updateDoc(doc(db, "financas_registros", idEmEdicao), dadosPayload);
+          // Edição de item único
+          await updateDoc(doc(db, "financas_registros", idEmEdicao), {
+            descricao: descricaoBase,
+            valor: valorTotal,
+            tipo: tipoSelecionado,
+            categoria: categoria,
+            formaPagamento: formaPagamento,
+            parcelas: parcelas,
+            data: dataInicial
+          });
           window.cancelarEdicao();
         } else {
-          dadosPayload.criadoEm = serverTimestamp();
-          await addDoc(collection(db, "financas_registros"), dadosPayload);
+          // Se for parcelado no Cartão de Crédito, lança cada parcela nos meses seguintes
+          if (formaPagamento === "Cartão de Crédito" && parcelas > 1) {
+            const valorParcela = parseFloat((valorTotal / parcelas).toFixed(2));
+            const dataObj = new Date(dataInicial + "T00:00:00");
+
+            for (let i = 1; i <= parcelas; i++) {
+              const dataParcela = new Date(dataObj.getFullYear(), dataObj.getMonth() + (i - 1), dataObj.getDate());
+              const dataFormatada = dataParcela.toISOString().split("T")[0];
+
+              await addDoc(collection(db, "financas_registros"), {
+                descricao: `${descricaoBase} (${i}/${parcelas})`,
+                valor: valorParcela,
+                tipo: tipoSelecionado,
+                categoria: categoria,
+                formaPagamento: formaPagamento,
+                parcelas: parcelas,
+                parcelaAtual: i,
+                data: dataFormatada,
+                criadoEm: serverTimestamp()
+              });
+            }
+          } else {
+            // Lançamento normal (à vista)
+            await addDoc(collection(db, "financas_registros"), {
+              descricao: descricaoBase,
+              valor: valorTotal,
+              tipo: tipoSelecionado,
+              categoria: categoria,
+              formaPagamento: formaPagamento,
+              parcelas: 1,
+              data: dataInicial,
+              criadoEm: serverTimestamp()
+            });
+          }
+
           form.reset();
           document.getElementById("data-transacao").valueAsDate = new Date();
+          window.verificarFormaPagamento();
           window.atualizarEstiloTipo('Receita');
         }
 
@@ -476,6 +566,8 @@
         const sinal = eReceita ? "+" : "-";
         const corValor = eReceita ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400";
         const bgTag = eReceita ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800" : "bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800";
+        
+        const infoPagamento = item.formaPagamento ? ` • ${item.formaPagamento}` : "";
 
         const div = document.createElement("div");
         div.className = "flex items-center justify-between p-3.5 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 transition-colors";
@@ -484,7 +576,7 @@
             <span class="text-xs px-2.5 py-1 rounded-lg border font-bold ${bgTag}">${item.tipo}</span>
             <div>
               <p class="font-bold text-slate-800 dark:text-slate-100 leading-tight">${item.descricao}</p>
-              <p class="text-xs text-slate-400 dark:text-slate-500">${item.categoria} • ${item.data}</p>
+              <p class="text-xs text-slate-400 dark:text-slate-500">${item.categoria}${infoPagamento} • ${item.data}</p>
             </div>
           </div>
           <div class="flex items-center gap-3">
@@ -602,14 +694,5 @@
       });
     }
   </script>
-  <script>
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./sw.js')
-        .then(reg => console.log('Service Worker registado com sucesso!'))
-        .catch(err => console.log('Erro ao registar Service Worker:', err));
-    });
-  }
-</script>
 </body>
 </html>
